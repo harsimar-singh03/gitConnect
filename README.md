@@ -16,20 +16,39 @@ A premium, full-stack developer matchmaking and networking application. `gitConn
 ### 1. User Authentication & Verification Flow
 ```mermaid
 sequenceDiagram
-    actor Client as Client App (React)
+    actor User as Developer (Browser)
+    participant Client as Client App (React)
     participant Server as Express Server
+    participant GitHub as GitHub OAuth API
     participant DB as MongoDB Atlas
 
-    Client->>Server: POST /login { email, password }
-    Server->>DB: Query User by email
-    DB-->>Server: Return User Data (with hashed password)
-    Server->>Server: Verify password using bcryptjs
-    alt Credentials Invalid
-        Server-->>Client: 400 Bad Request: "Invalid credentials"
-    else Credentials Valid
-        Server->>Server: Generate JWT (Signed with JWT_SECRET)
-        Server-->>Client: Set HttpOnly Cookie ("token") + Send User Object (200 OK)
+    rect rgb(30, 30, 45)
+        Note over User, DB: Option A: Traditional Authentication Flow
+        User->>Client: Enters Email & Password
+        Client->>Server: POST /login { email, password }
+        Server->>DB: Query User by email
+        DB-->>Server: Return User Data (with hashed password)
+        Server->>Server: Verify password using bcryptjs
     end
+
+    rect rgb(45, 30, 45)
+        Note over User, DB: Option B: GitHub OAuth Authentication Flow
+        User->>Client: Clicks "Login with GitHub"
+        Client->>User: Redirects to GitHub Gateway
+        User->>GitHub: Grants permissions
+        GitHub->>Client: Redirects back with ?code=TEMP_CODE
+        Client->>Server: POST /auth/github { code }
+        Server->>GitHub: Exchange code + client_secret
+        GitHub-->>Server: Return access_token
+        Server->>GitHub: Fetch user profile & email
+        GitHub-->>Server: Return profile details (username, email)
+        Server->>DB: Query User by email (Register if new)
+        DB-->>Server: Return User Data
+    end
+
+    Server->>Server: Generate JWT (Signed with JWT_SECRET)
+    Server-->>Client: Set HttpOnly Cookie ("token") + Send User Object (200 OK)
+    Client->>User: Load Feed Page
 ```
 
 ### 2. Protected Session Pipeline
@@ -150,6 +169,28 @@ Clears active cookies.
   "Logout successful!"
   ```
 
+#### `POST /auth/github`
+Exchanges the temporary code for a GitHub access token, verifies/registers the user, and issues a session cookie.
+* **Request Body:**
+  ```json
+  {
+    "code": "temporary_github_oauth_code"
+  }
+  ```
+* **Headers:** Sets `Set-Cookie: token=<jwt_session_token>; HttpOnly`
+* **Success Response (200 OK):**
+  ```json
+  {
+    "message": "Login successful via GitHub!",
+    "user": {
+      "_id": "603d433...",
+      "firstName": "Jane",
+      "lastName": "Smith",
+      "email": "jane@example.com"
+    }
+  }
+  ```
+
 ---
 
 ### Profile Endpoints
@@ -199,6 +240,8 @@ Modifies profile characteristics.
    PORT=7000
    MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/gitConnect
    JWT_SECRET=your_secret_key_here
+   GITHUB_CLIENT_ID=your_github_client_id
+   GITHUB_CLIENT_SECRET=your_github_client_secret
    ```
 3. Run the API server:
    ```bash
