@@ -1,33 +1,34 @@
-const express= require("express");
+require("dotenv").config();
+const express = require("express");
+const cookieParser = require("cookie-parser");
+const connectDB = require("./src/config/database");
 
-const app= express();
+const app = express();
 
-app.get("/user",(req,res)=>{
-    res.send({name:"harsimar",age:23})
-})
+// Middlewares
+app.use(express.json());
+app.use(cookieParser());
 
-app.post("/user",(req,res)=>{
-    res.send("data posted ")
-})
+// Routers
+const authRouter = require("./src/routes/auth");
+const profileRouter = require("./src/routes/profile");
+const userRouter = require("./src/routes/user");
+
+app.use("/", authRouter);
+app.use("/", profileRouter);
+app.use("/", userRouter);
+
+const PORT = process.env.PORT || 7000;
+
+connectDB()
+  .then(() => {
+    console.log("Database connection established successfully!");
+    app.listen(PORT, () => {
+      console.log(`Server is running on port ${PORT}...`);
+    });
+  })
+  .catch((err) => {
+    console.error("Database connection failed: ", err.message);
+  });
 
 
-
-// app.use("/game",(req,res)=>{
-//     res.send("hello gamer")
-// })
-
-// app.use("/exam",(req,res)=>{
-//     res.send("hello exam")
-// })
-
-// app.use("/test",(req,res)=>{
-//     res.send("hello harsimar")
-// })
-
-// app.use("/",(req,res)=>{
-//     res.send("hello singh")
-// })
-
-app.listen(3000,()=>{
-    console.log("server is created at 3000 ..")
-})
