@@ -78,4 +78,106 @@ authRouter.post("/logout", async (req, res) => {
   res.send("Logout successful!");
 });
 
+// GITHUB OAUTH API
+authRouter.post("/auth/github", async (req, res) => {
+  try {
+    const { code } = req.body;
+    if (!code) {
+      throw new Error("Authorization code is missing");
+    }
+
+    const { GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET } = process.env;
+
+    // 1. Exchange code for access token
+    const tokenResponse = await fetch("https://github.com/login/oauth/access_token", {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        client_id: GITHUB_CLIENT_ID,
+        client_secret: GITHUB_CLIENT_SECRET,
+        code,
+      }),
+    });
+
+    const tokenData = await tokenResponse.json();
+    const accessToken = tokenData.access_token;
+    if (!accessToken) {
+      throw new Error(tokenData.error_description || "Failed to obtain GitHub access token");
+    }
+
+    // 2. Fetch user profile from GitHub
+    const userResponse = await fetch("https://api.github.com/user", {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "User-Agent": "gitConnect-Backend",
+      },
+    });
+    const profileData = await userResponse.json();
+
+    // 3. Fetch user emails from GitHub (handles private email setups)
+    const emailsResponse = await fetch("https://api.github.com/user/emails", {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "User-Agent": "gitConnect-Backend",
+      },
+    });
+    const emailsData = await emailsResponse.json();
+
+    // Look for verified primary email
+    let email = null;
+    if (Array.isArray(emailsData)) {
+      const primaryEmailObj = emailsData.find((e) => e.primary && e.verified);
+      if (primaryEmailObj) {
+        email = primaryEmailObj.email;
+      }
+    }
+
+    // Fallback if no email is verified or found
+    if (!email) {
+      email = profileData.email || `${profileData.login}@github.com`;
+    }
+
+    // 4. Find or create the user in local DB
+    let user = await User.findOne({ email: email.toLowerCase() });
+
+    if (!user) {
+      // Split display name or fallback to username login
+      const displayName = profileData.name || profileData.login;
+      const nameParts = displayName.split(" ");
+      const firstName = nameParts[0] || "GitHub_User";
+      const lastName = nameParts.slice(1).join(" ") || "";
+
+      // Generate a strong random password to pass schema validation
+      const randomPassword = "GithubAuthPass@123$" + Math.random().toString(36).slice(-8);
+      const passwordHash = await bcrypt.hash(randomPassword, 10);
+
+      user = new User({
+        firstName,
+        lastName,
+        email: email.toLowerCase(),
+        password: passwordHash,
+      });
+
+      await user.save();
+    }
+
+    // 5. Create JWT session token
+    const sessionToken = await user.getJWT();
+
+    // 6. Set HTTP-Only Cookie
+    res.cookie("token", sessionToken, {
+      expires: new Date(Date.now() + 8 * 3600000), // 8 hours
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+    });
+
+    res.send({ message: "Login successful via GitHub!", user });
+  } catch (err) {
+    res.status(400).send("ERROR: " + err.message);
+  }
+});
+
 module.exports = authRouter;

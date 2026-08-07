@@ -2,6 +2,9 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "../utils/UserContext";
 
+// Replace this with your GitHub OAuth App Client ID
+const GITHUB_CLIENT_ID = "Ov23liXN11qF9Lh3Wk1y";
+
 const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
@@ -11,6 +14,7 @@ const Login = () => {
   const [age, setAge] = useState("");
   const [gender, setGender] = useState("male");
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const { user, setUser } = useUser();
   const navigate = useNavigate();
@@ -21,6 +25,54 @@ const Login = () => {
       navigate("/feed");
     }
   }, [user, navigate]);
+
+  // Handle GitHub OAuth Callback
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get("code");
+    if (code) {
+      setIsLoading(true);
+      setError("");
+
+      fetch("/api/auth/github", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ code }),
+      })
+        .then((res) => {
+          if (!res.ok) {
+            return res.text().then((text) => {
+              throw new Error(text);
+            });
+          }
+          return res.json();
+        })
+        .then((data) => {
+          setUser(data.user);
+          // Clear query parameters from URL bar
+          window.history.replaceState({}, document.title, window.location.pathname);
+          navigate("/feed");
+        })
+        .catch((err) => {
+          let cleanMsg = err.message || "Failed to log in with GitHub";
+          if (cleanMsg.startsWith("ERROR: ")) {
+            cleanMsg = cleanMsg.replace("ERROR: ", "");
+          }
+          setError(cleanMsg);
+          // Clear query parameters on error
+          window.history.replaceState({}, document.title, window.location.pathname);
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    }
+  }, [navigate, setUser]);
+
+  const handleGithubLogin = () => {
+    window.location.href = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=user:email`;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -80,13 +132,11 @@ const Login = () => {
           setUser(loginData.user);
           navigate("/feed");
         } else {
-          // If auto login fails, send back to login screen
           setIsLogin(true);
           setError("Account created! Please log in.");
         }
       }
     } catch (err) {
-      // Extract clean error message (handling "ERROR: " prefix if returned by backend)
       let cleanMsg = err.message || "Something went wrong";
       if (cleanMsg.startsWith("ERROR: ")) {
         cleanMsg = cleanMsg.replace("ERROR: ", "");
@@ -94,6 +144,23 @@ const Login = () => {
       setError(cleanMsg);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div style={{
+        display: "flex",
+        height: "50vh",
+        alignItems: "center",
+        justifyContent: "center",
+        flexDirection: "column",
+        gap: "1rem",
+        color: "var(--text-secondary)",
+        fontSize: "1.2rem"
+      }}>
+        <div>Verifying details with GitHub...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="auth-container">
@@ -196,6 +263,31 @@ const Login = () => {
 
           <button type="submit" className="btn-primary">
             {isLogin ? "Log In" : "Sign Up"}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleGithubLogin}
+            style={{
+              background: "#24292e",
+              color: "white",
+              border: "none",
+              borderRadius: "12px",
+              padding: "0.85rem",
+              fontFamily: "var(--font-sans)",
+              fontSize: "1rem",
+              fontWeight: "600",
+              cursor: "pointer",
+              transition: "opacity 0.2s ease, transform 0.1s ease",
+              marginTop: "1rem",
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "0.5rem"
+            }}
+          >
+            Login with GitHub
           </button>
         </form>
 
