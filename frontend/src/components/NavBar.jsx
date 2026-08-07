@@ -22,7 +22,7 @@ const NavBar = () => {
   return (
     <nav className="navbar">
       <Link to={user ? "/feed" : "/"} className="navbar-brand">
-        💻 gitConnect
+        gitConnect
       </Link>
 
       {user && (

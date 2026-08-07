@@ -105,7 +105,7 @@ const Login = () => {
 
         {error && (
           <div className="alert-error">
-            ⚠️ {error}
+            {error}
           </div>
         )}
 

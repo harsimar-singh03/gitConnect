@@ -39,7 +39,6 @@ function App() {
         color: "var(--text-secondary)",
         fontSize: "1.25rem"
       }}>
-        <div>⏳</div>
         <div>Initializing gitConnect...</div>
       </div>
     );

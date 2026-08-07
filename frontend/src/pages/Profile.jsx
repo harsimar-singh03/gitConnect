@@ -70,8 +70,8 @@ const Profile = () => {
           <p>Update your details so other developers can find you</p>
         </div>
 
-        {error && <div className="alert-error">⚠️ {error}</div>}
-        {success && <div className="profile-success">✅ {success}</div>}
+        {error && <div className="alert-error">{error}</div>}
+        {success && <div className="profile-success">{success}</div>}
 
         <form onSubmit={handleSubmit}>
           <div className="form-row">

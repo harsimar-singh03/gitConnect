@@ -61,13 +61,11 @@ const Feed = () => {
     <div className="feed-container">
       {loading ? (
         <div className="glass-card feed-message-card">
-          <div className="feed-message-icon">⏳</div>
           <div className="feed-message-title">Finding developers...</div>
-          <div className="feed-message-subtitle">Scanning gitConnect database</div>
+          <div className="feed-message-subtitle">Scanning the database</div>
         </div>
       ) : error ? (
         <div className="glass-card feed-message-card">
-          <div className="feed-message-icon">⚠️</div>
           <div className="feed-message-title">Error Loading Feed</div>
           <div className="feed-message-subtitle">{error}</div>
           <button className="btn-primary" onClick={fetchFeed} style={{ marginTop: "1rem" }}>
@@ -76,9 +74,8 @@ const Feed = () => {
         </div>
       ) : feed.length === 0 ? (
         <div className="glass-card feed-message-card">
-          <div className="feed-message-icon">🚀</div>
           <div className="feed-message-title">You've seen everyone!</div>
-          <div className="feed-message-subtitle">There are no other developers nearby. Check back later!</div>
+          <div className="feed-message-subtitle">There are no other profiles nearby. Check back later.</div>
           <button className="btn-primary" onClick={fetchFeed} style={{ marginTop: "1.5rem" }}>
             Refresh Feed
           </button>

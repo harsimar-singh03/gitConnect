@@ -1,7 +1,7 @@
 const UserCard = ({ user, onLike, onDislike }) => {
   if (!user) return null;
 
-  // Let's create some cute developer skills tags based on user ID or age to make it look like a dev profile!
+  // Generate fallback skills based on age for demo purposes
   const mockSkills = [
     ["React", "NodeJS", "JavaScript", "MongoDB"],
     ["Python", "Django", "PostgreSQL", "Docker"],
@@ -28,7 +28,7 @@ const UserCard = ({ user, onLike, onDislike }) => {
         <h3 className="user-card-name-age">
           {user.firstName} {user.lastName || ""}, <span>{user.age || "N/A"}</span>
         </h3>
-        <p className="user-card-email">✉️ {user.email}</p>
+        <p className="user-card-email">{user.email}</p>
 
         <p className="user-card-skills-title">Primary Stack</p>
         <div className="user-card-skills-list">
@@ -45,15 +45,17 @@ const UserCard = ({ user, onLike, onDislike }) => {
           className="btn-action btn-action-dislike" 
           onClick={() => onDislike(user)}
           title="Ignore"
+          style={{ fontSize: "1rem", fontWeight: 600 }}
         >
-          ❌
+          Pass
         </button>
         <button 
           className="btn-action btn-action-like" 
           onClick={() => onLike(user)}
           title="Connect"
+          style={{ fontSize: "1rem", fontWeight: 600 }}
         >
-          ❤️
+          Like
         </button>
       </div>
     </div>
